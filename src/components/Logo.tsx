@@ -27,8 +27,9 @@ export function Logo({ className, iconOnly = false, variant = 'header' }: LogoPr
     );
   }
 
-  // Small icon: kept in /public so it can also serve as favicon.
-  const iconSrc = isDark ? '/logoSmallSombre.png' : '/logoSmallClair.png';
+  // Small icon: kept in /public so it can also serve as favicon. Prefix with the
+  // Vite base URL so it resolves under the deployment sub-path (e.g. /JSON-Anonymizer/).
+  const iconSrc = `${import.meta.env.BASE_URL}${isDark ? 'logoSmallSombre.png' : 'logoSmallClair.png'}`;
   return (
     <div className={cn('inline-flex items-center gap-2.5', className)}>
       <img
