@@ -81,6 +81,13 @@ const LOWER = 'abcdefghijklmnopqrstuvwxyz';
 const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const DIGITS_STR = '0123456789';
 
+function applyCase(original, pick) {
+  if (!/\p{L}/u.test(original)) return pick;
+  if (original === original.toUpperCase()) return pick.toUpperCase();
+  if (original === original.toLowerCase()) return pick.toLowerCase();
+  return pick;
+}
+
 function xmur3(input) {
   let h = 1779033703 ^ input.length;
   for (let i = 0; i < input.length; i++) {
@@ -199,11 +206,11 @@ function anonymizeValue(value, type, fileSeed) {
       if (typeof value === 'number') return anonymizeNumber(value);
       return value;
     case 'companyName':
-      return randomFrom(COMPANY_NAMES, value);
+      return applyCase(value, randomFrom(COMPANY_NAMES, value));
     case 'firstName':
-      return randomFrom(FIRST_NAMES, value);
+      return applyCase(value, randomFrom(FIRST_NAMES, value));
     case 'lastName':
-      return randomFrom(LAST_NAMES, value);
+      return applyCase(value, randomFrom(LAST_NAMES, value));
     case 'other':
     default:
       if (typeof value === 'string') return shuffleOther(value, fileSeed);
@@ -370,5 +377,65 @@ console.log(`  Téléphone : ${telOrig} → ${telAnon}`);
 console.log(`  Email     : ${emailOrig} → ${emailFromTree}`);
 console.log(`  Re-run    : ${telOrig} → ${telAnonAgain} (identique)`);
 console.log(`  Autre seed: ${telOrig} → ${telAnonOther} (différent)`);
+
+// --- Case mirroring for list-backed types ---------------------------------
+console.log('\n--- Cohérence de la casse (raison sociale / nom / prénom) ---');
+const CASE_LIST_TESTS = [
+  { input: 'DUPONT', list: LAST_NAMES, label: 'Nom MAJ' },
+  { input: 'dupont', list: LAST_NAMES, label: 'Nom min' },
+  { input: 'Dupont', list: LAST_NAMES, label: 'Nom Cap' },
+  { input: 'CAMILLE', list: FIRST_NAMES, label: 'Prénom MAJ' },
+  { input: 'camille', list: FIRST_NAMES, label: 'Prénom min' },
+  { input: 'BOULANGERIE DU PONT SARL', list: COMPANY_NAMES, label: 'Société MAJ' },
+  { input: 'boulangerie du pont sarl', list: COMPANY_NAMES, label: 'Société min' },
+  { input: 'Boulangerie du Pont SARL', list: COMPANY_NAMES, label: 'Société Mixed (laisse pick tel quel)' },
+];
+function caseClassWord(s) {
+  if (!/\p{L}/u.test(s)) return 'none';
+  if (s === s.toUpperCase()) return 'upper';
+  if (s === s.toLowerCase()) return 'lower';
+  return 'mixed';
+}
+for (const t of CASE_LIST_TESTS) {
+  const pick = applyCase(t.input, randomFrom(t.list, t.input));
+  const inCase = caseClassWord(t.input);
+  const outCase = caseClassWord(pick);
+  if (inCase === 'upper' || inCase === 'lower') {
+    assert.equal(outCase, inCase, `${t.label}: casse "${t.input}" → "${pick}" (attendu ${inCase}, obtenu ${outCase})`);
+  }
+  console.log(`  ${t.label.padEnd(45)} ${t.input.padEnd(28)} → ${pick}`);
+}
+console.log('✓ casse mirrorée sur les piochages depuis listes');
+
+// --- Persistence des bornes numériques dans le config export --------------
+console.log('\n--- Sérialisation des bornes numériques ---');
+const exportPayload = {
+  originalFileName: 'demo.json',
+  createdAt: new Date().toISOString(),
+  appVersion: '1.0.0',
+  variables: [
+    { path: 'effectif', type: 'numeric', anonymize: true, numericMin: 1, numericMax: 500 },
+    { path: 'ca',       type: 'numeric', anonymize: true, numericMin: 0, numericMax: 1e8 },
+    { path: 'sans_bornes', type: 'numeric', anonymize: true },
+    { path: 'nom',      type: 'lastName', anonymize: true },
+  ],
+};
+const serialized = JSON.stringify(exportPayload, null, 2);
+const reparsed = JSON.parse(serialized);
+const effectif = reparsed.variables.find((v) => v.path === 'effectif');
+const ca = reparsed.variables.find((v) => v.path === 'ca');
+const sansBornes = reparsed.variables.find((v) => v.path === 'sans_bornes');
+
+assert.equal(effectif.numericMin, 1, 'numericMin sérialisé pour effectif');
+assert.equal(effectif.numericMax, 500, 'numericMax sérialisé pour effectif');
+assert.equal(ca.numericMin, 0, 'numericMin=0 (falsy) bien sérialisé');
+assert.equal(ca.numericMax, 1e8, 'numericMax grand sérialisé');
+assert.ok(!('numericMin' in sansBornes), 'pas de numericMin si non défini');
+assert.ok(!('numericMax' in sansBornes), 'pas de numericMax si non défini');
+
+console.log('  ✓ effectif → min=' + effectif.numericMin + ', max=' + effectif.numericMax);
+console.log('  ✓ ca       → min=' + ca.numericMin + ', max=' + ca.numericMax + ' (le 0 est conservé)');
+console.log('  ✓ sans_bornes : pas de numericMin/numericMax (comportement attendu)');
+console.log('✓ bornes numériques persistées dans le JSON exporté');
 
 console.log('\n✅ Tous les contrôles sont passés.');

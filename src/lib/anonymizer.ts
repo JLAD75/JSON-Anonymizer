@@ -183,28 +183,39 @@ export function anonymizeNumber(value: number, bounds?: NumericBounds): number {
 /* Strings (lists + char shuffle)                                     */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Mirrors the case profile of `original` onto `pick`. Three cases are
+ * detected — *all upper*, *all lower*, otherwise the picked value's own
+ * casing is kept. We deliberately do NOT try to do mixed-case matching
+ * (e.g. "Mac Donald") because that requires word-aligned heuristics that
+ * would be wrong more often than right on free-form company names.
+ */
+function applyCase(original: string, pick: string): string {
+  if (!/\p{L}/u.test(original)) return pick;
+  if (original === original.toUpperCase()) return pick.toUpperCase();
+  if (original === original.toLowerCase()) return pick.toLowerCase();
+  return pick;
+}
+
 export function anonymizeCompanyName(current: string): string {
-  return randomFrom(COMPANY_NAMES, current);
+  return applyCase(current, randomFrom(COMPANY_NAMES, current));
 }
 
 export function anonymizeFirstName(current: string): string {
-  return randomFrom(FIRST_NAMES, current);
+  return applyCase(current, randomFrom(FIRST_NAMES, current));
 }
 
 export function anonymizeLastName(current: string): string {
-  return randomFrom(LAST_NAMES, current);
+  return applyCase(current, randomFrom(LAST_NAMES, current));
 }
 
 /**
- * Replaces a city by another (real but unrelated) francophone city.
- * If the original was upper-cased (e.g. "PARIS"), the substitute follows.
+ * Replaces a city by another (real but unrelated) francophone city,
+ * mirroring the casing of the original (`PARIS` → `MARSEILLE`,
+ * `paris` → `marseille`, `Paris` → `Marseille`).
  */
 export function anonymizeCity(current: string): string {
-  const pick = randomFrom(CITIES, current);
-  if (current.length > 0 && current === current.toUpperCase() && /[A-ZÀ-Ý]/.test(current)) {
-    return pick.toUpperCase();
-  }
-  return pick;
+  return applyCase(current, randomFrom(CITIES, current));
 }
 
 /**
@@ -215,9 +226,6 @@ export function anonymizeCity(current: string): string {
 export function anonymizeFullName(current: string): string {
   const trimmed = current.trim();
   if (!trimmed) return current;
-
-  // Detect upper-case style (e.g. "DUPONT JEAN" or "DUPONT, JEAN").
-  const isAllUpper = trimmed === trimmed.toUpperCase() && /[A-ZÀ-Ý]/.test(trimmed);
 
   // Detect the separator used between the two name parts.
   const separators: Array<[RegExp, string]> = [
@@ -237,14 +245,13 @@ export function anonymizeFullName(current: string): string {
     }
   }
 
-  let first = randomFrom(FIRST_NAMES);
-  let last = randomFrom(LAST_NAMES);
-  if (isAllUpper) {
-    first = first.toUpperCase();
-    last = last.toUpperCase();
-  }
-  const out = isLastFirst ? `${last}${sep}${first}` : `${first}${sep}${last}`;
-  return out === trimmed ? `${first}${sep}${randomFrom(LAST_NAMES, last)}` : out;
+  const first = randomFrom(FIRST_NAMES);
+  const last = randomFrom(LAST_NAMES);
+  const composed = isLastFirst ? `${last}${sep}${first}` : `${first}${sep}${last}`;
+  const out = applyCase(trimmed, composed);
+  return out === trimmed
+    ? applyCase(trimmed, `${first}${sep}${randomFrom(LAST_NAMES, last)}`)
+    : out;
 }
 
 /**
