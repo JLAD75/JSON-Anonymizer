@@ -1,0 +1,55 @@
+{
+  "campagne": "OPISE-2026",
+  "millesime": 2026,
+  "etablissements": [
+    {
+      "siret": "12345678901234",
+      "raison_sociale": "Boulangerie du Pont SARL",
+      "effectif": 23,
+      "ca": 1485000.75,
+      "contact": {
+        "prenom": "Camille",
+        "nom": "Dupuis",
+        "telephone": "+33 6 12 34 56 78",
+        "email": "camille.dupuis@example.fr"
+      },
+      "actif": true,
+      "id": "etab-001"
+    },
+    {
+      "siret": "98765432109876",
+      "raison_sociale": "Forge Industrielle Lannoy SAS",
+      "effectif": 412,
+      "ca": 87654321.42,
+      "contact": {
+        "prenom": "Antoine",
+        "nom": "Renard",
+        "telephone": "+33 6 22 11 00 33",
+        "email": "a.renard@forge-lannoy.fr"
+      },
+      "actif": true,
+      "id": "etab-002"
+    },
+    {
+      "siret": "55667788990011",
+      "raison_sociale": "Atelier Tisserand",
+      "effectif": 8,
+      "ca": 312540,
+      "contact": {
+        "prenom": "Inès",
+        "nom": "Sanchez",
+        "telephone": "+33 6 99 88 77 66",
+        "email": "ines.sanchez@atelier-tisserand.fr"
+      },
+      "actif": false,
+      "id": "etab-003"
+    }
+  ],
+  "responsable_collecte": {
+    "prenom": "Marie",
+    "nom": "Le Bihan",
+    "service": "Direction Régionale Bretagne"
+  },
+  "date_extraction": "2026-06-01T08:15:00Z",
+  "version": "1.0"
+}
